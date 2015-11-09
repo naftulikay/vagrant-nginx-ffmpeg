@@ -219,6 +219,7 @@
         --with-threads
         --with-stream
         --with-stream_ssl_module
+        --add-module=/usr/src/nginx-rtmp-module-1.1.7
       args:
           chdir: /usr/src/nginx-1.9.6
           creates: /usr/src/nginx-1.9.6/Makefile
@@ -234,6 +235,8 @@
           creates: /usr/sbin/nginx
     - name: nginx configuration file
       template: src=templates/nginx.conf.j2 dest=/etc/nginx/nginx.conf mode=0644
+    - name: nginx user
+      user: name=nginx uid=80 shell=/bin/false state=present
 # configuration and things
 - hosts: all
   tasks:
