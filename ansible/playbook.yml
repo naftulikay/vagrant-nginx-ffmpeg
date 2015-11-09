@@ -1,0 +1,129 @@
+---
+- hosts: all
+  tasks:
+    # version control
+    - apt: name=git
+    - apt: name=mercurial
+    # build tools
+    - apt: name=build-essential
+    - apt: name=autoconf
+    - apt: name=automake
+    - apt: name=cmake
+    - apt: name=pkg-config
+    - apt: name=texinfo
+    - apt: name=yasm
+    # libraries
+    - apt: name=libass-dev
+    - apt: name=libfreetype6-dev
+    - apt: name=libsdl1.2-dev
+    - apt: name=libtheora-dev
+    - apt: name=libtool
+    - apt: name=libva-dev
+    - apt: name=libvdpau-dev
+    - apt: name=libvorbis-dev
+    - apt: name=libxcb1-dev
+    - apt: name=libxcb-shm0-dev
+    - apt: name=libxcb-xfixes0-dev
+    - apt: name=zlib1g-dev
+    - apt: name=libopus-dev
+    - apt: name=libmp3lame-dev
+    - apt: name=libx264-dev
+    # dependent libraries
+    # libx265
+    - name: clone libx265
+      command: hg clone https://bitbucket.org/multicoreware/x265 /usr/src/x265
+      args:
+          creates: /usr/src/x265
+    - name: update libx265
+      command: hg pull -u
+      args:
+          chdir: /usr/src/x265
+    - name: configure libx265
+      command: cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLED_SHARED:bool=off ../../source
+      args:
+          chdir: /usr/src/x265/build/linux
+    - name: compile libx265
+      command: make -j2
+      args:
+          chdir: /usr/src/x265/build/linux
+    - name: install libx265
+      command: make install
+      args:
+          chdir: /usr/src/x265/build/linux
+    # libfdk-aac
+    - name: clone libfdk-aac
+      command: git clone https://github.com/mstorsjo/fdk-aac.git /usr/src/libfdk-aac
+      args:
+          creates: /usr/src/libfdk-aac
+    - name: update libfdk-aac
+      command: git pull origin master
+      args:
+          chdir: /usr/src/libfdk-aac
+    - name: autoconf libfdk-aac
+      command: autoreconf -fiv
+      args:
+          chdir: /usr/src/libfdk-aac
+    - name: configure libfdk-aac
+      command: /usr/src/libfdk-aac/configure --prefix=/usr/local --disable-shared
+      args:
+          chdir: /usr/src/libfdk-aac
+    - name: compile libfdk-aac
+      command: make -j2
+      args:
+          chdir: /usr/src/libfdk-aac
+    - name: install libfdk-aac
+      command: make install
+      args:
+          chdir: /usr/src/libfdk-aac
+    # libvpx
+    - name: download libvpx
+      shell: wget -O - https://storage.googleapis.com/downloads.webmproject.org/releases/webm/libvpx-1.4.0.tar.bz2 | tar xjvf -
+      args:
+          chdir: /usr/src
+          creates: /usr/src/libvpx-1.4.0
+    - name: configure libvpx
+      command: ./configure --prefix=/usr/local --disable-examples --disable-unit-tests
+      args:
+          chdir: /usr/src/libvpx-1.4.0
+          creates: /usr/src/libvpx-1.4.0/Makefile
+    - name: compile libvpx
+      command: make -j2
+      args:
+          chdir: /usr/src/libvpx-1.4.0
+          creates: /usr/src/libvpx-1.4.0/libvpx.a
+    - name: install libvpx
+      command: make install
+      args:
+          chdir: /usr/src/libvpx-1.4.0
+          creates: /usr/local/lib/libvpx.a
+    # ffmpeg itself
+    - name: download ffmpeg
+      command: git clone https://github.com/ffmpeg/ffmpeg.git /usr/src/ffmpeg
+      args:
+          chdir: /usr/src
+          creates: /usr/src/ffmpeg
+    - name: update ffmpeg
+      command: git pull origin master
+      args:
+          chdir: /usr/src/ffmpeg
+    - name: configure ffmpeg
+      command: /usr/src/ffmpeg/configure \
+        --prefix=/usr/local \
+        --pkg-config-flags='--static' \
+        --bindir=/usr/local/bin \
+        --enable-gpl --enable-version3 --enable-nonfree \
+        --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame \
+        --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx \
+        --enable-libx264 --enable-libx265
+      args:
+          chdir: /usr/src/ffmpeg
+    - name: compile ffmpeg
+      command: make -j2
+      args:
+          chdir: /usr/src/ffmpeg
+    - name: install ffmpeg
+      command: make install
+      args:
+          chdir: /usr/src/ffmpeg
+    - name: update ldconfig
+      command: ldconfig
