@@ -145,8 +145,11 @@
       args:
           chdir: /usr/src/ffmpeg
           creates: /usr/local/bin/ffmpeg
-    - name: update ldconfig
-      command: ldconfig
+      notify:
+          - update ldconfig
+  handlers:
+      - name: update ldconfig
+        command: ldconfig
 
 # second task: compile and install nginx and its dependencies
 - hosts: all
@@ -218,11 +221,22 @@
         --with-stream_ssl_module
       args:
           chdir: /usr/src/nginx-1.9.6
+          creates: /usr/src/nginx-1.9.6/Makefile
     - name: compile nginx
       command: make -j 2
       args:
           chdir: /usr/src/nginx-1.9.6
+          creates: /usr/src/nginx-1.9.6/objs/nginx
     - name: install nginx
       command: make install
       args:
           chdir: /usr/src/nginx-1.9.6
+          creates: /usr/sbin/nginx
+# configuration and things
+- hosts: all
+  tasks:
+      - name: setup hls and dash mounts
+        mount: name={{ item.path }} src=tmpfs fstype=tmpfs opts=size={{ item.size }} state=mounted
+        with_items:
+            - { path: '/tmp/hls', size: '64m' }
+            - { path: '/tmp/dash', size: '64m' }
