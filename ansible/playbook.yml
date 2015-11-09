@@ -1,33 +1,34 @@
 ---
+# first task: compile and install FFMPEG and its dependencies
 - hosts: all
   tasks:
-    # version control
-    - apt: name=git
-    - apt: name=mercurial
-    # build tools
-    - apt: name=build-essential
-    - apt: name=autoconf
-    - apt: name=automake
-    - apt: name=cmake
-    - apt: name=pkg-config
-    - apt: name=texinfo
-    - apt: name=yasm
-    # libraries
-    - apt: name=libass-dev
-    - apt: name=libfreetype6-dev
-    - apt: name=libsdl1.2-dev
-    - apt: name=libtheora-dev
-    - apt: name=libtool
-    - apt: name=libva-dev
-    - apt: name=libvdpau-dev
-    - apt: name=libvorbis-dev
-    - apt: name=libxcb1-dev
-    - apt: name=libxcb-shm0-dev
-    - apt: name=libxcb-xfixes0-dev
-    - apt: name=zlib1g-dev
-    - apt: name=libopus-dev
-    - apt: name=libmp3lame-dev
-    - apt: name=libx264-dev
+    - name: install ffmpeg build dependencies
+      apt: name={{ item }}
+      with_items:
+          - git
+          - mercurial
+          - build-essential
+          - autoconf
+          - automake
+          - cmake
+          - pkg-config
+          - texinfo
+          - yasm
+          - libass-dev
+          - libfreetype6-dev
+          - libsdl1.2-dev
+          - libtheora-dev
+          - libtool
+          - libva-dev
+          - libvdpau-dev
+          - libvorbis-dev
+          - libxcb1-dev
+          - libxcb-shm0-dev
+          - libxcb-xfixes0-dev
+          - zlib1g-dev
+          - libopus-dev
+          - libmp3lame-dev
+          - libx264-dev
     # dependent libraries
     # libx265
     - name: clone libx265
@@ -42,14 +43,17 @@
       command: cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLED_SHARED:bool=off ../../source
       args:
           chdir: /usr/src/x265/build/linux
+          creates: /usr/src/x265/build/linux/Makefile
     - name: compile libx265
       command: make -j2
       args:
           chdir: /usr/src/x265/build/linux
+          creates: /usr/src/x265/build/linux/x265
     - name: install libx265
       command: make install
       args:
           chdir: /usr/src/x265/build/linux
+          creates: /usr/local/bin/x265
     # libfdk-aac
     - name: clone libfdk-aac
       command: git clone https://github.com/mstorsjo/fdk-aac.git /usr/src/libfdk-aac
@@ -63,18 +67,22 @@
       command: autoreconf -fiv
       args:
           chdir: /usr/src/libfdk-aac
+          creates: /usr/src/libfdk-aac/configure
     - name: configure libfdk-aac
       command: /usr/src/libfdk-aac/configure --prefix=/usr/local --disable-shared
       args:
           chdir: /usr/src/libfdk-aac
+          creates: /usr/src/libfdk-aac/libtool
     - name: compile libfdk-aac
       command: make -j2
       args:
           chdir: /usr/src/libfdk-aac
+          creates: /usr/src/libfdk-aac/libFDK/src/FDK_core.o
     - name: install libfdk-aac
       command: make install
       args:
           chdir: /usr/src/libfdk-aac
+          creates: /usr/local/lib/libfdk-aac.a
     # libvpx
     - name: download libvpx
       shell: wget -O - https://storage.googleapis.com/downloads.webmproject.org/releases/webm/libvpx-1.4.0.tar.bz2 | tar xjvf -
@@ -117,13 +125,40 @@
         --enable-libx264 --enable-libx265
       args:
           chdir: /usr/src/ffmpeg
+          creates: /usr/src/ffmpeg/config.asm
     - name: compile ffmpeg
       command: make -j2
       args:
           chdir: /usr/src/ffmpeg
+          creates: /usr/src/ffmpeg/ffmpeg
     - name: install ffmpeg
       command: make install
       args:
           chdir: /usr/src/ffmpeg
+          creates: /usr/local/bin/ffmpeg
     - name: update ldconfig
       command: ldconfig
+
+# second task: compile and install nginx and its dependencies
+- hosts: all
+  tasks:
+    - name: download nginx
+      get_url: url=http://nginx.org/download/nginx-1.9.6.tar.gz dest=/usr/src/nginx-1.9.6.tar.gz
+    - name: download nginx signature
+      get_url: url=http://nginx.org/download/nginx-1.9.6.tar.gz.asc dest=/usr/src/nginx-1.9.6.tar.gz.asc
+    - name: install nginx signing keys
+      command: gpg --keyserver hkp://pgp.mit.edu:80 --recv-keys \
+         A09CD539B8BB8CBE96E82BDFABD4D3B3F5806B4D \
+         4C2C85E705DC730833990C38A9376139A524C53E \
+         B0F4253373F8F6F510D42178520A9993A1C052F8 \
+         65506C02EFC250F1B7A3D694ECF0E90B2C172083 \
+         7338973069ED3F443F4D37DFA64FD5B17ADB39A8 \
+         6E067260B83DCF2CA93C566F518509686C7E5E82 \
+         573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
+    - name: verify nginx zip
+      command: gpg --verify /usr/src/nginx-1.9.6.tar.gz.asc /usr/src/nginx-1.9.6.tar.gz
+    - name: extract nginx source
+      command: tar xzvf /usr/src/nginx-1.9.6.tar.gz
+      args:
+          chdir: /usr/src
+          creates: /usr/src/nginx-1.9.6/README
