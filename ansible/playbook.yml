@@ -142,6 +142,21 @@
 # second task: compile and install nginx and its dependencies
 - hosts: all
   tasks:
+    # nginx dependencies
+    - name: install nginx build dependencies
+      apt: name={{ item }}
+      with_items:
+          - build-essential
+          - libssl-dev
+          - libxml2
+          - libxml2-dev
+          - libxslt1.1
+          - libxslt-dev
+          - libgd3
+          - libgd-dev
+          - libgeoip1
+          - libgeoip-dev
+    # nginx proper
     - name: download nginx
       get_url: url=http://nginx.org/download/nginx-1.9.6.tar.gz dest=/usr/src/nginx-1.9.6.tar.gz
     - name: download nginx signature
@@ -162,3 +177,50 @@
       args:
           chdir: /usr/src
           creates: /usr/src/nginx-1.9.6/README
+    # nginx media server
+    - name: download and extract nginx media server module
+      shell: wget -O - "https://github.com/arut/nginx-rtmp-module/archive/v1.1.7.tar.gz" | tar xzvf -
+      args:
+          chdir: /usr/src
+          creates: /usr/src/nginx-rtmp-module-1.1.7/README.md
+    # compile
+    - name: configure nginx
+      command: /usr/src/nginx-1.9.6/configure \
+         --prefix=/etc/nginx \
+         --sbin-path=/usr/local/sbin \
+         --conf-path=/etc/nginx/nginx.conf \
+         --error-log-path=/var/log/nginx/error.log \
+         --http-client-body-temp-path=/var/lib/nginx/body \
+         --http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
+         --http-log-path=/var/log/nginx/access.log \
+         --http-proxy-temp-path=/var/lib/nginx/proxy \
+         --http-scgi-temp-path=/var/lib/nginx/scgi \
+         --http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
+         --lock-path=/var/lock/nginx.lock \
+         --pid-path=/var/run/nginx.pid \
+         --with-debug \
+         --with-http_addition_module \
+         --with-http_geoip_module \
+         --with-http_gzip_static_module \
+         --with-http_image_filter_module \
+         --with-http_realip_module \
+         --with-http_stub_status_module \
+         --with-http_ssl_module \
+         --with-http_sub_module \
+         --with-http_xslt_module \
+         --with-ipv6 \
+         --with-sha1=/usr/include/openssl \
+         --with-md5=/usr/include/openssl \
+         --with-mail \
+         --with-mail_ssl_module \
+         --add-module=/usr/src/nginx-rtmp-module-1.1.7
+      args:
+          chdir: /usr/src/nginx-1.9.6
+    - name: compile nginx
+      command: make -j 2
+      args:
+          chdir: /usr/src/nginx-1.9.6
+    - name: install nginx
+      command: make install
+      args:
+          chdir: /usr/src/nginx-1.9.6
