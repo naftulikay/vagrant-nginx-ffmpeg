@@ -12,13 +12,13 @@ ADD ansible/inventory /etc/ansible/inventory
 ADD ansible/playbook.yml /etc/ansible/playbook.yml
 ADD ansible/templates /etc/ansible/templates
 
-ADD scripts/nginx-service.sh /etc/service/nginx/run
-RUN chmod 0755 /etc/service/nginx/run
-
 WORKDIR /etc/ansible
 
 RUN PYTHONUNBUFFERED=1 ANSIBLE_FORCE_COLOR=true \
     ansible-playbook playbook.yml -c local -i /etc/ansible/inventory
+
+ADD scripts/nginx-service.sh /etc/service/nginx/run
+RUN chmod 0755 /etc/service/nginx/run
 
 EXPOSE 1935
 
