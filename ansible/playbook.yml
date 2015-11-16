@@ -38,6 +38,7 @@
           - libgd-dev
           - libgeoip1
           - libgeoip-dev
+          - wget
     # dependent libraries
     # libx265
     - name: clone libx265
@@ -241,7 +242,7 @@
 - hosts: all
   tasks:
       - name: setup hls and dash mounts
-        mount: name={{ item.path }} src=tmpfs fstype=tmpfs opts=size={{ item.size }} state=mounted
+        file: path={{ item }} owner=nginx group=nginx mode=0775 state=directory
         with_items:
-            - { path: '/tmp/hls', size: '64m' }
-            - { path: '/tmp/dash', size: '64m' }
+            - /srv/hls
+            - /srv/dash
